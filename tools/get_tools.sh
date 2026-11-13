@@ -8,23 +8,11 @@ WORK=$(mktemp -d); cd "$WORK"
 have() { command -v "$1" >/dev/null 2>&1; }
 
 if ! have makerom; then
-  echo "== makerom: trying a prebuilt release =="
-  URL=$(curl -fsSL https://api.github.com/repos/3DSGuy/Project_CTR/releases 2>/dev/null \
-        | grep -o '"browser_download_url": *"[^"]*"' | grep -i 'makerom' | grep -i 'ubuntu' | grep -i 'x86_64' \
-        | head -n 1 | sed 's/.*"\(http[^"]*\)"/\1/' || true)
-  if [ -n "$URL" ]; then
-    echo "downloading $URL"
-    if curl -fsSL "$URL" -o makerom.zip && unzip -o -q makerom.zip; then
-      F=$(find . -name makerom -type f | head -n 1)
-      [ -n "$F" ] && cp "$F" "$BIN/makerom" && chmod +x "$BIN/makerom"
-    fi
-  fi
-fi
-if ! have makerom; then
-  echo "== makerom: building from source =="
+  echo "== makerom: building from source for this container's glibc =="
   git clone --depth 1 https://github.com/3DSGuy/Project_CTR.git
   ( cd Project_CTR/makerom && (make deps || true) && make -j2 )
   F=$(find Project_CTR -name makerom -type f -perm -u+x | head -n 1)
+  [ -n "$F" ]
   cp "$F" "$BIN/makerom"; chmod +x "$BIN/makerom"
 fi
 
