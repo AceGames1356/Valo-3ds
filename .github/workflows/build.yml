@@ -27,13 +27,15 @@ jobs:
     container: devkitpro/devkitarm:latest
     steps:
       - uses: actions/checkout@v4
-      - name: Make sure the 3DS toolchain packages are present
+      - name: Verify the preinstalled 3DS toolchain
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE" || true
-          dkp-pacman -Syu --noconfirm --needed 3ds-dev
           echo "DEVKITPRO=$DEVKITPRO DEVKITARM=$DEVKITARM"
-          arm-none-eabi-gcc --version | head -n 1
-          dkp-pacman -Q libctru || true
+          test -f "$DEVKITARM/3ds_rules"
+          test -f "$DEVKITPRO/libctru/include/3ds.h"
+          "$DEVKITARM/bin/arm-none-eabi-gcc" --version | head -n 1
+          command -v make
+          command -v smdhtool
       - name: Detect which C-Stick API this libctru provides
         run: sh tools/probe_cstick.sh
       - name: Build
