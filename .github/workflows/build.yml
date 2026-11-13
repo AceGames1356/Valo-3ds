@@ -1,0 +1,98 @@
+name: Build Valorant 3DS
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # 1) Host-side tests of all game logic / rendering / UI (gcc + sanitizers). No devkitPro needed.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install gcc
+        run: sudo apt-get update && sudo apt-get install -y gcc make
+      - name: Run host tests
+        run: sh tools/run_tests.sh
+
+  # 2) The real Nintendo 3DS build (devkitARM + libctru) -> valorant3ds.3dsx
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make sure the 3DS toolchain packages are present
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE" || true
+          dkp-pacman -Syu --noconfirm --needed 3ds-dev
+          echo "DEVKITPRO=$DEVKITPRO DEVKITARM=$DEVKITARM"
+          arm-none-eabi-gcc --version | head -n 1
+          dkp-pacman -Q libctru || true
+      - name: Detect which C-Stick API this libctru provides
+        run: sh tools/probe_cstick.sh
+      - name: Build
+        run: |
+          make clean
+          make
+      - name: Show outputs
+        run: ls -la valorant3ds.3dsx valorant3ds.smdh valorant3ds.elf
+      - uses: actions/upload-artifact@v4
+        with:
+          name: valorant3ds-3dsx
+          path: |
+            valorant3ds.3dsx
+            valorant3ds.smdh
+            valorant3ds.elf
+
+  # 3) Optional: .3ds (CCI) and .cia through makerom + bannertool. Best effort: if the
+  #    external tools cannot be fetched/built, this job fails but the workflow's required
+  #    jobs (test, build) are unaffected. The .3dsx above is the primary deliverable.
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE" || true
+          dkp-pacman -Syu --noconfirm --needed 3ds-dev
+          apt-get update
+          apt-get install -y git cmake build-essential curl unzip libssl-dev zlib1g-dev libpng-dev
+      - name: Install makerom + bannertool
+        run: sh tools/get_tools.sh
+      - name: Build .3dsx, .3ds and .cia
+        run: |
+          make
+          make 3ds
+          make cia
+      - uses: actions/upload-artifact@v4
+        with:
+          name: valorant3ds-3ds-and-cia
+          path: |
+            valorant3ds.3ds
+            valorant3ds.cia
+
+  # 4) When you push a tag like v1.0.0, attach the build outputs to a GitHub Release.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: valorant3ds-3dsx
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            valorant3ds.3dsx
+            valorant3ds.smdh
