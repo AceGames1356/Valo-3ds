@@ -269,15 +269,6 @@ static void screen_controls(void){
     gx_text(T,12,34,"MOVE ........... CIRCLE PAD",C_TXT,1);
     gx_text(T,12,46,"AIM ............ C-STICK / TOUCH DRAG",C_TXT,1);
     gx_text(T,12,58,"FIRE ........... R",C_TXT,1);
-    gx_text(T,12,70,"AIM / SCOPE .... SELECT (SNIPERS)",C_TXT,1);
-    gx_text(T,12,82,"JUMP ........... A",C_TXT,1);
-    gx_text(T,12,94,"RELOAD ......... B",C_TXT,1);
-    gx_text(T,12,106,"USE / PLANT .... Y",C_TXT,1);
-    gx_text(T,12,118,"SWAP WEAPON .... X",C_TXT,1);
-    gx_text(T,12,130,"ABILITY 1 ...... L",C_TXT,1);
-    gx_text(T,12,142,"ABILITY 2 ...... ZL",C_TXT,1);
-    gx_text(T,12,154,"ULTIMATE ....... ZR",C_TXT,1);
-    gx_text(T,12,166,"PAUSE .......... START",C_TXT,1);
     for(int i=0;i<ACT_COUNT;i++){
         char b[64]; snprintf(b,sizeof b,"%-13s ... %s",act_name(i),g_set.bind[i]<0?"TOUCH SCREEN ONLY":btn_name(g_set.bind[i]));
         gx_text(T,12,76+i*12,b,(g_set.bind[i]>=B_DUP&&g_set.dpadLook)?RGB(255,120,90):C_TXT,1);
