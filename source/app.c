@@ -40,12 +40,16 @@ static const char *DIFFN[3]={"EASY","NORMAL","HARD"};
 /* ------------------------------------------------------------------ UI primitives */
 static bool in_rect(int x,int y,int w,int h){ return I->tx>=x&&I->tx<x+w&&I->ty>=y&&I->ty<y+h; }
 static bool btn(int x,int y,int w,int h,const char *label,uint16_t col,bool enabled){
-    bool hot=enabled&&I->touching&&in_rect(x,y,w,h);
+    /* Give small touch controls a slightly larger hit area without changing
+       their layout. The 1px padding makes 15px control rows much easier to tap. */
+    int pad=(h<=20)?1:0;
+    bool hit=in_rect(x-pad,y-pad,w+pad*2,h+pad*2);
+    bool hot=enabled&&I->touching&&hit;
     uint16_t c=enabled?(hot?gx_blend(col,RGB(255,255,255),10):col):RGB(36,40,52);
     gx_rect(B,x,y,w,h,c); gx_frame(B,x,y,w,h,enabled?RGB(120,130,160):RGB(60,64,78));
     int sc=(gx_textw(label,2)<=w-8&&h>=22)?2:1;
     gx_textc(B,x+w/2,y+(h-7*sc)/2,label,enabled?C_TXT:RGB(90,96,112),sc);
-    return enabled&&I->tdown&&in_rect(x,y,w,h);
+    return enabled&&I->tdown&&hit;
 }
 static void title_bar(const char *t){
     gx_rect(B,0,0,BOT_W,18,C_PANEL); gx_text(B,8,5,t,C_GOLD,1); gx_rect(B,0,18,BOT_W,1,C_RED);
@@ -301,7 +305,7 @@ static const char *HOW[][11]={
  {"OBJECTIVE","","ATTACKERS: carry the SPIKE to a bomb site, plant it (hold","USE for 4s) and protect it until it detonates (45s).","DEFENDERS: stop the plant, or defuse the spike (hold USE","for 7s, progress checkpoints at half).","","A round ends when a team is eliminated, the time runs out","(defenders win), or the spike detonates / is defused.","First team to the target score wins. Sides switch at half.",""},
  {"CONTROLS","","CIRCLE PAD  move       C-STICK / D-PAD / TOUCH  look","R fire   A jump   B reload   Y use (plant/defuse)","X swap weapon  L ability 1  ZL ability 2  ZR ultimate","SELECT walk (slow, quiet) / scope with sniper rifles","START pause.  Old 3DS: use touch buttons for abilities.","Drag on the minimap to look around (touch look).","Everything is rebindable in CONTROLS.","","" },
  {"BUY PHASE & ECONOMY","","Round start: 20s buy phase, you cannot leave spawn.","Tap a category tab, then tap a weapon to buy it.","Armor: light 400 (25) / heavy 1000 (50). It absorbs 2/3","of incoming damage until depleted.","Win +3000. Loss +1900 (+500 per loss streak, max 2900).","Kill +200. Plant +300 for losing attackers. Max 9000.","If you survive you keep your gear for the next round.","Buying a replacement in the same phase refunds the old gun.",""},
- {"AGENTS & ABILITIES","","EMBER duelist: dash and flash.  VEIL controller: smoke","and slowing field.  BASTION sentinel: tripwire, turret,","team heal.  RADAR initiator: scan, stun, global reveal.","Basic abilities use cooldowns. The ultimate needs points","from kills, plants/defuses and finished rounds.","","TEAM COMMANDS (bottom screen): FOLLOW makes bots stay near","you, HOLD stops them, A/B/C sends them to that site.","AUTO lets them follow their own plan."},
+ {"AGENTS & ABILITIES","","PHOENIX duelist: flash and area control.  OMEN controller:","smokes and a tactical reposition.  KILLJOY sentinel:","turret and lockdown.  SOVA initiator: recon and shock.","Basic abilities use cooldowns. The ultimate needs points","from kills, plants/defuses and finished rounds.","","TEAM COMMANDS (bottom screen): FOLLOW makes bots stay near","you, HOLD stops them, A/B/C sends them to that site.","AUTO lets them follow their own plan."},
  {"TIPS","","Headshots deal far more damage. Aim high.","Moving makes you inaccurate. Stop to shoot, or WALK.","Low crates can be jumped over, and you can shoot over them.","Smokes block vision but not bullets.","Listen: running and gunfire can be heard by bots too.","Bots react to sound, so quiet-walk when flanking.","Play with FOLLOW if you want your team to stay close.","Portals (Bind-style map) rotate you across the map instantly.","Difficulty changes bot reaction time and aim accuracy."}
 };
 #define HOW_PAGES 5
