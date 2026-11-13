@@ -56,7 +56,8 @@ jobs:
   # Publish the .3dsx as a direct release download (no ZIP extraction needed).
   publish:
     if: github.event_name != 'pull_request'
-    needs: build
+    needs: [build, package]
+    if: always() && needs.build.result == 'success' && needs.package.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -64,12 +65,17 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: valorant3ds-3dsx
-      - name: Publish direct download
+      - uses: actions/download-artifact@v4
+        with:
+          name: valorant3ds-3ds-and-cia
+      - name: Publish direct downloads
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest-build
           name: Latest Valorant 3DS build
-          files: valorant3ds.3dsx
+          files: |
+            valorant3ds.3dsx
+            valorant3ds.3ds
           overwrite_files: true
           make_latest: false
 
