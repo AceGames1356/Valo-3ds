@@ -39,7 +39,7 @@ jobs:
           source = entries[0] if len(entries) == 1 and entries[0].is_dir() else temp
 
           for item in source.iterdir():
-              if item.name == ".git":
+              if item.name in {".git", ".github"}:
                   continue
               destination = Path(item.name)
               if destination.is_dir():
