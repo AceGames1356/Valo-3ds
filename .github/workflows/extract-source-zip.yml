@@ -1,0 +1,68 @@
+name: Extract source ZIP into main
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Extract project files
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import shutil
+          import tempfile
+
+          archive = Path("Valorant3DS_v1.0_source.zip")
+          if not archive.is_file():
+              raise SystemExit("Source ZIP was not found in the repository root.")
+
+          temp = Path(tempfile.mkdtemp(prefix="valo3ds-"))
+          with ZipFile(archive) as z:
+              for info in z.infolist():
+                  target = (temp / info.filename).resolve()
+                  if temp.resolve() not in target.parents and target != temp.resolve():
+                      raise SystemExit(f"Unsafe ZIP path: {info.filename}")
+              z.extractall(temp)
+
+          entries = list(temp.iterdir())
+          source = entries[0] if len(entries) == 1 and entries[0].is_dir() else temp
+
+          for item in source.iterdir():
+              if item.name == ".git":
+                  continue
+              destination = Path(item.name)
+              if destination.is_dir():
+                  shutil.rmtree(destination)
+              elif destination.exists():
+                  destination.unlink()
+              if item.is_dir():
+                  shutil.copytree(item, destination)
+              else:
+                  shutil.copy2(item, destination)
+
+          archive.unlink()
+          print("Extracted project files into the repository root.")
+          PY
+
+      - name: Commit extracted files to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Extract Valorant 3DS v1.0 source into main"
+            git push origin main
+          fi
