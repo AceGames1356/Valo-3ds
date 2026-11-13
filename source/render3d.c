@@ -140,8 +140,33 @@ static void render_walls(Surf s,const Camera *c){
         float yTopW=s_horizon-(WALL_H-camZ)*f/zwall, yBotW=s_horizon+camZ*f/zwall;
         int top=(int)floorf(yTopW), bot=(int)floorf(yBotW);
         if(!wall){ top=bot=s_horizon; }
-        for(int y=0;y<top&&y<SCR_H;y++){ int i=y-s_horizon+240; col[SCR_H-1-y]=s_bgTab[i<0?0:(i>479?479:i)]; }
-        for(int y=(bot<0?0:bot+1);y<SCR_H;y++){ int i=y-s_horizon+240; col[SCR_H-1-y]=s_bgTab[i<0?0:(i>479?479:i)]; }
+        /* Perspective-mapped environment: ceiling panels above, tiled concrete
+           floor below. This adds real world-space depth cues instead of a flat gradient. */
+        for(int y=0;y<top&&y<SCR_H;y++){
+            int i=y-s_horizon+240; uint16_t c=s_bgTab[i<0?0:(i>479?479:i)];
+            int panel=((x/32)+(y/24))&1;
+            if((x%32==0)||(y%24==0)) c=RGB(27,36,52);
+            else if(panel) c=gx_blend(c,RGB(78,91,116),5);
+            col[SCR_H-1-y]=c;
+        }
+        for(int y=(bot<0?0:bot+1);y<SCR_H;y++){
+            int i=y-s_horizon+240;
+            float dist=camZ*f/(float)(y-s_horizon);
+            float wx=c->x+rdx*dist, wy=c->y+rdy*dist;
+            int tx=(int)floorf(wx), ty=(int)floorf(wy);
+            float ux=wx-floorf(wx), uy=wy-floorf(wy);
+            int zone=mp_cell(tx,ty);
+            C3 base={72,78,88};
+            int z=g_map.zone[clampi(ty,0,MAP_H-1)][clampi(tx,0,MAP_W-1)];
+            if(z==1) base=(C3){91,67,57};
+            else if(z==2) base=(C3){57,78,91};
+            else if(z==3) base=(C3){62,83,67};
+            if(((tx+ty)&1)!=0){ base.r=(uint8_t)(base.r*0.91f); base.g=(uint8_t)(base.g*0.91f); base.b=(uint8_t)(base.b*0.91f); }
+            if(ux<0.035f||uy<0.035f||ux>0.965f||uy>0.965f){ base.r*=0.48f; base.g*=0.48f; base.b*=0.48f; }
+            if(mp_is_low(zone)){ base.r=105; base.g=86; base.b=62; }
+            float fog=clampf(1.0f-dist/34.0f,0.12f,1.0f);
+            col[SCR_H-1-y]=mix565(FOG,base,fog);
+        }
         int lowN=0;
         for(int k=nh-1;k>=0;k--){
             const Hit *h=&hits[k];
