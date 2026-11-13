@@ -218,8 +218,11 @@ static void draw_box(Surf s,const Proj *p,float wx,float wy,float z0,float z1,fl
 
 static void draw_unit(Surf s,const Proj *p,const Unit *u,const Unit *view,float sx,float depth){
     bool friendly=(u->squad==view->squad);
-    uint16_t body=friendly?RGB(70,190,210):RGB(215,70,70), dark=friendly?RGB(30,80,95):RGB(100,30,35);
-    uint16_t pal[7]={0,RGB(235,190,150),body,dark,friendly?RGB(180,255,255):RGB(255,230,120),RGB(40,40,46),RGB(25,25,30)};
+    uint16_t accent=g_agents[u->agent].color;
+    uint16_t body=friendly?gx_blend(accent,RGB(65,190,210),13):gx_blend(accent,RGB(225,65,70),12);
+    uint16_t dark=friendly?RGB(20,58,72):RGB(75,25,34);
+    uint16_t visor=friendly?RGB(145,245,255):RGB(255,205,120);
+    uint16_t pal[7]={0,RGB(226,184,150),body,dark,visor,RGB(38,42,50),RGB(18,22,29)};
     if(u->hurtT>0.35f) pal[2]=RGB(255,255,255);
     float hgt=UNIT_H*p->f/depth, wid=hgt*0.5f;
     float yTop=s_horizon-(u->z+UNIT_H-p->camZ)*p->f/depth;
