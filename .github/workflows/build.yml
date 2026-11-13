@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   # 1) Host-side tests of all game logic / rendering / UI (gcc + sanitizers). No devkitPro needed.
@@ -51,6 +51,27 @@ jobs:
             valorant3ds.3dsx
             valorant3ds.smdh
             valorant3ds.elf
+
+
+  # Publish the .3dsx as a direct release download (no ZIP extraction needed).
+  publish:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: valorant3ds-3dsx
+      - name: Publish direct download
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-build
+          name: Latest Valorant 3DS build
+          files: valorant3ds.3dsx
+          overwrite_files: true
+          make_latest: false
 
   # 3) Optional: .3ds (CCI) and .cia through makerom + bannertool. Best effort: if the
   #    external tools cannot be fetched/built, this job fails but the workflow's required
