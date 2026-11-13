@@ -86,10 +86,11 @@ jobs:
       - name: Install dependencies
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE" || true
-          dkp-pacman -Syu --noconfirm --needed 3ds-dev
+          test -f "$DEVKITARM/3ds_rules"
+          test -f "$DEVKITPRO/libctru/include/3ds.h"
           apt-get update
           apt-get install -y git cmake build-essential curl unzip libssl-dev zlib1g-dev libpng-dev
-      - name: Install makerom + bannertool
+      - name: Build makerom + bannertool for this container
         run: sh tools/get_tools.sh
       - name: Build .3dsx, .3ds and .cia
         run: |
