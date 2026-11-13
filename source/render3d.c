@@ -13,7 +13,7 @@
 static uint8_t  s_tex[NTEX][TEX*TEX];            /* [type][u*32+v] palette indices 0..15 */
 static uint16_t s_pal[NTEX][SHADES][16];
 static uint16_t s_bgTab[480];                    /* ceiling/floor colour by (y-horizon+240) */
-static uint8_t  s_unitSpr[32][16];
+static uint8_t  s_unitSpr[40][24];
 static float    s_zbuf[TOP_W];
 static float    s_lowT[TOP_W][3];
 static int16_t  s_lowY[TOP_W][3];
@@ -80,15 +80,19 @@ void rd_init(void){
         if(dy<0) s_bgTab[i]=mix565((C3){18,24,40},(C3){52,70,104},1.0f-d*0.85f);
         else     s_bgTab[i]=mix565((C3){34,38,50},(C3){92,96,110},d);
     }
-    /* humanoid sprite, 16x32. 0 clear, 1 skin, 2 body, 3 dark, 4 visor, 5 gun, 6 boots */
+    /* Detailed 24x40 tactical-agent silhouette. 0 clear, 1 skin, 2 armor,
+       3 dark fabric, 4 visor, 5 rifle, 6 boots. */
     memset(s_unitSpr,0,sizeof s_unitSpr);
-    for(int y=0;y<8;y++) for(int x=5;x<11;x++) if(!((y==0||y==7)&&(x==5||x==10))) s_unitSpr[y][x]=1;
-    for(int x=6;x<10;x++){ s_unitSpr[3][x]=4; s_unitSpr[4][x]=4; }
-    for(int y=8;y<19;y++) for(int x=3;x<13;x++) s_unitSpr[y][x]=2;
-    for(int y=9;y<18;y++){ for(int x=1;x<3;x++) s_unitSpr[y][x]=3; for(int x=13;x<15;x++) s_unitSpr[y][x]=3; }
-    for(int y=12;y<15;y++) for(int x=9;x<16;x++) s_unitSpr[y][x]=5;
-    for(int y=19;y<30;y++){ for(int x=4;x<8;x++) s_unitSpr[y][x]=3; for(int x=8;x<12;x++) s_unitSpr[y][x]=3; }
-    for(int y=30;y<32;y++){ for(int x=3;x<8;x++) s_unitSpr[y][x]=6; for(int x=8;x<13;x++) s_unitSpr[y][x]=6; }
+    for(int y=1;y<9;y++) for(int x=9;x<16;x++) s_unitSpr[y][x]=1;
+    for(int x=9;x<16;x++) s_unitSpr[5][x]=4;
+    for(int y=8;y<12;y++) for(int x=10;x<15;x++) s_unitSpr[y][x]=3;
+    for(int y=11;y<26;y++) for(int x=5;x<20;x++) s_unitSpr[y][x]=2;
+    for(int y=13;y<25;y++){ for(int x=2;x<6;x++) s_unitSpr[y][x]=3; for(int x=19;x<23;x++) s_unitSpr[y][x]=3; }
+    for(int y=17;y<20;y++) for(int x=13;x<24;x++) s_unitSpr[y][x]=5;
+    for(int y=24;y<28;y++) for(int x=6;x<19;x++) s_unitSpr[y][x]=3;
+    for(int y=27;y<37;y++){ for(int x=7;x<11;x++) s_unitSpr[y][x]=3; for(int x=14;x<18;x++) s_unitSpr[y][x]=3; }
+    for(int y=36;y<40;y++){ for(int x=6;x<12;x++) s_unitSpr[y][x]=6; for(int x=13;x<19;x++) s_unitSpr[y][x]=6; }
+    for(int x=7;x<18;x++) s_unitSpr[24][x]=4;
 }
 
 static int cell_tex(int c){ return c==C_CRATE?8:(c==C_BARRIER?9:(c-1)); }
@@ -224,7 +228,7 @@ static void draw_unit(Surf s,const Proj *p,const Unit *u,const Unit *view,float 
     uint16_t visor=friendly?RGB(145,245,255):RGB(255,205,120);
     uint16_t pal[7]={0,RGB(226,184,150),body,dark,visor,RGB(38,42,50),RGB(18,22,29)};
     if(u->hurtT>0.35f) pal[2]=RGB(255,255,255);
-    float hgt=UNIT_H*p->f/depth, wid=hgt*0.5f;
+    float hgt=UNIT_H*p->f/depth, wid=hgt*0.62f;
     float yTop=s_horizon-(u->z+UNIT_H-p->camZ)*p->f/depth;
     int xl=(int)(sx-wid*0.5f), xr=(int)(sx+wid*0.5f);
     bool ghost=u->revealT>0&&!friendly;
@@ -233,11 +237,11 @@ static void draw_unit(Surf s,const Proj *p,const Unit *u,const Unit *view,float 
         bool hidden=depth>=s_zbuf[x]-0.05f;
         if(hidden&&!ghost) continue;
         int clip=hidden?SCR_H:col_clip(x,depth);
-        int sc=(int)((x-xl)*16/(wid>1?wid:1)); if(sc<0)sc=0; if(sc>15)sc=15;
-        float stp=32.0f/hgt;
+        int sc=(int)((x-xl)*24/(wid>1?wid:1)); if(sc<0)sc=0; if(sc>23)sc=23;
+        float stp=40.0f/hgt;
         int ya=(int)yTop, yb=(int)(yTop+hgt);
         for(int y=ya<0?0:ya;y<yb&&y<SCR_H&&y<clip;y++){
-            int sr=(int)((y-yTop)*stp); if(sr<0)sr=0; if(sr>31)sr=31;
+            int sr=(int)((y-yTop)*stp); if(sr<0)sr=0; if(sr>39)sr=39;
             uint8_t k=s_unitSpr[sr][sc]; if(!k) continue;
             if(hidden){ if((x+y)&1) continue; gx_px(s,x,y,RGB(255,60,60)); continue; }
             uint16_t c=pal[k];
