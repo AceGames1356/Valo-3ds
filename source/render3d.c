@@ -352,15 +352,44 @@ void rd_viewmodel(Surf s,const Unit *u,float bob){
     if(u->swapT>0) by+=(int)(u->swapT*40.0f);
     if(u->reloadT>0) by+=(int)(sinf(clampf(u->reloadT/w->reload,0,1)*PI_F)*34.0f);
     int kick=(int)(u->kick*1.5f); by+=kick;
-    uint16_t dk=RGB(36,38,46), md=RGB(70,74,88), lt=RGB(120,126,142), hand=RGB(225,180,140);
+    uint16_t dk=RGB(24,27,34), md=RGB(58,64,76), lt=RGB(132,140,154);
+    uint16_t edge=RGB(92,103,120), grip=RGB(34,39,49), hand=RGB(220,174,137);
     int x0=250+bx, y0=SCR_H-70+by;
-    switch(w->type){
-    case WT_PISTOL: gx_rect(s,x0+30,y0+22,70,22,md); gx_rect(s,x0+84,y0+18,28,10,dk); gx_rect(s,x0+40,y0+44,18,30,dk); gx_rect(s,x0+34,y0+40,28,12,hand); x0+=0; break;
-    case WT_SMG:    gx_rect(s,x0+10,y0+20,100,22,md); gx_rect(s,x0+100,y0+22,36,8,dk); gx_rect(s,x0+40,y0+40,14,36,dk); gx_rect(s,x0+70,y0+40,20,14,hand); break;
-    case WT_SHOTGUN:gx_rect(s,x0-10,y0+18,140,18,md); gx_rect(s,x0-10,y0+36,110,8,dk); gx_rect(s,x0+70,y0+34,34,14,hand); gx_rect(s,x0+20,y0+40,16,34,dk); break;
-    case WT_SNIPER: gx_rect(s,x0-20,y0+20,160,14,md); gx_rect(s,x0+10,y0+8,40,12,dk); gx_rect(s,x0+120,y0+22,36,8,dk); gx_rect(s,x0+50,y0+34,24,38,dk); gx_rect(s,x0+80,y0+34,22,12,hand); break;
-    case WT_HEAVY:  gx_rect(s,x0-10,y0+14,130,32,md); gx_rect(s,x0+100,y0+22,50,10,dk); gx_rect(s,x0+20,y0+4,60,10,dk); gx_rect(s,x0+40,y0+46,16,32,dk); gx_rect(s,x0+78,y0+46,22,14,hand); break;
-    default: /* rifle */ gx_rect(s,x0-6,y0+20,130,20,md); gx_rect(s,x0+110,y0+23,46,8,dk); gx_rect(s,x0+30,y0+40,16,36,dk); gx_rect(s,x0+70,y0+40,24,14,hand); gx_rect(s,x0+10,y0+12,30,8,lt); break;
+    /* Layered weapon silhouettes: receiver, barrel, rail, sights and grips. */
+    if(w->type==WT_PISTOL){
+        gx_rect(s,x0+34,y0+24,78,17,md); gx_rect(s,x0+42,y0+20,60,5,lt);
+        gx_rect(s,x0+94,y0+27,44,7,dk); gx_rect(s,x0+133,y0+28,12,4,edge);
+        gx_rect(s,x0+46,y0+41,25,29,grip); gx_line(s,x0+48,y0+45,x0+67,y0+65,edge);
+        gx_rect(s,x0+82,y0+18,7,6,dk); gx_rect(s,x0+87,y0+15,3,4,edge);
+        gx_rect(s,x0+38,y0+36,18,5,hand);
+    } else {
+        int length=(w->type==WT_SNIPER)?164:((w->type==WT_SHOTGUN)?145:132);
+        int rx=x0-4;
+        gx_rect(s,rx+12,y0+23,length-28,17,md);
+        gx_rect(s,rx+24,y0+19,length-54,5,lt);
+        gx_rect(s,rx+length-24,y0+27,42,7,dk);
+        gx_rect(s,rx+length+14,y0+29,9,3,edge);
+        gx_rect(s,rx+4,y0+28,20,7,dk);
+        gx_rect(s,rx+30,y0+18,24,4,edge);
+        gx_rect(s,rx+54,y0+14,35,5,dk);
+        gx_rect(s,rx+61,y0+10,21,4,edge);
+        gx_rect(s,rx+42,y0+40,17,34,grip);
+        gx_rect(s,rx+83,y0+40,23,13,hand);
+        gx_line(s,rx+44,y0+48,rx+55,y0+66,edge);
+        gx_rect(s,rx+16,y0+42,22,8,hand);
+        gx_rect(s,rx+18,y0+50,15,22,grip);
+        if(w->type==WT_SNIPER){
+            gx_rect(s,rx+68,y0+4,44,9,dk); gx_rect(s,rx+76,y0+1,28,4,edge);
+            gx_rect(s,rx+91,y0+13,5,5,lt);
+        } else if(w->type==WT_SHOTGUN){
+            gx_rect(s,rx+6,y0+17,112,5,dk); gx_rect(s,rx+12,y0+44,76,7,grip);
+        } else if(w->type==WT_HEAVY){
+            gx_rect(s,rx+22,y0+7,74,9,dk); gx_rect(s,rx+30,y0+3,56,4,edge);
+            gx_rect(s,rx+102,y0+41,18,22,grip);
+        } else {
+            gx_rect(s,rx+20,y0+12,48,6,dk); gx_rect(s,rx+26,y0+8,34,4,edge);
+            gx_rect(s,rx+70,y0+40,18,26,grip);
+        }
     }
     if(u->muzzleT>0){ int mx=x0+(w->type==WT_PISTOL?112:150), my=y0+(w->type==WT_PISTOL?20:24);
         gx_disc(s,mx+6,my,10,RGB(255,200,80)); gx_disc(s,mx+6,my,5,RGB(255,250,200)); }
