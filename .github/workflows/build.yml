@@ -55,9 +55,8 @@ jobs:
 
   # Publish the .3dsx as a direct release download (no ZIP extraction needed).
   publish:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && needs.build.result == 'success' && needs.package.result == 'success'
     needs: [build, package]
-    if: always() && needs.build.result == 'success' && needs.package.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
