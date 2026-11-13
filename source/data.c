@@ -28,24 +28,25 @@ const Weapon g_weapons[W_COUNT]={
  {"ODIN",   "HEAVY",  1,WT_HEAVY, 3200,100,200,12.00f,5.00f, 38, 95, 32, 1,0.60f,3.0f,0.35f,20,0.85f,true, 1.0f,0.90f},
 };
 
-/* Original agents. Slot 0/1 = basic abilities (cooldown), slot 2 = ultimate. */
+/* Valorant agent roster. Abilities use the game's lightweight 3DS-friendly
+   simulation equivalents; names and roles match the recognizable agents. */
 const Agent g_agents[A_COUNT]={
- {"EMBER","DUELIST","Aggressive entry fragger. Dashes into sites and blinds defenders.",RGB(255,120,60),{
-   {"BLAZE DASH","Dash forward a short distance.",AB_DASH,12,0.18f,0,4.5f,0},
-   {"FLASHPOINT","Pop-flash. Enemies looking at it are blinded.",AB_FLASH,20,2.0f,9,0,0},
-   {"OVERDRIVE","10s: faster fire rate, move speed, instant reload.",AB_OVERDRIVE,0,10,0,0,6}}},
- {"VEIL","CONTROLLER","Shapes the fight with smokes and slowing fields.",RGB(150,110,255),{
-   {"SMOKE ORB","Place a smoke at your crosshair. Blocks vision.",AB_SMOKE,18,9,1.7f,14,0},
-   {"GRAVITY MIRE","Field that slows enemies inside.",AB_FIELD,25,7,3.0f,12,0},
-   {"ECLIPSE","Huge long-lasting smoke at your crosshair.",AB_BIGSMOKE,0,14,3.2f,14,7}}},
- {"BASTION","SENTINEL","Locks down areas with traps and an automated turret.",RGB(80,200,160),{
-   {"TRIPWIRE","Hidden trap at your feet. Reveals, slows and hurts.",AB_TRAP,22,60,1.1f,0,0},
-   {"SENTRY","Deploy a turret that shoots visible enemies.",AB_TURRET,35,25,12,4,0},
-   {"REINFORCE","Fully heal and armor yourself and nearby allies.",AB_HEAL,0,0,9,0,7}}},
- {"RADAR","INITIATOR","Gathers information and softens up enemy positions.",RGB(90,170,255),{
-   {"SCAN PULSE","Reveal enemies nearby, even through walls.",AB_SCAN,20,4,14,0,0},
-   {"STUN BOLT","Thrown at crosshair. Concusses enemies in the blast.",AB_STUN,22,3,3.5f,12,0},
-   {"SWEEP","Reveal every enemy on the map for 6s.",AB_REVEALALL,0,6,0,0,6}}},
+ {"PHOENIX","DUELIST","Flash into fights, control space with fire, and recover with your ultimate.",RGB(255,105,55),{
+   {"CURVEBALL","A flash that blinds enemies facing it.",AB_FLASH,20,2.0f,9,0,0},
+   {"HOT HANDS","A fire field that slows and pressures enemies.",AB_FIELD,25,7,3.0f,12,0},
+   {"RUN IT BACK","A short combat reset: restore health and armor.",AB_HEAL,0,0,9,0,7}}},
+ {"OMEN","CONTROLLER","Use paranoia and dark cover to take space and disrupt sightlines.",RGB(145,120,220),{
+   {"PARANOIA","A forward flash that blinds enemies.",AB_FLASH,20,2.0f,9,0,0},
+   {"DARK COVER","Deploy a large smoke that blocks vision.",AB_BIGSMOKE,18,14,3.2f,14,0},
+   {"FROM THE SHADOWS","A tactical pulse that reveals enemy positions.",AB_REVEALALL,0,6,0,0,6}}},
+ {"KILLJOY","SENTINEL","Lock down areas with an automated turret and defensive utility.",RGB(230,190,70),{
+   {"ALARM BOT","Place a hidden trap that reveals and slows an enemy.",AB_TRAP,22,60,1.1f,0,0},
+   {"TURRET","Deploy an automated turret that attacks visible enemies.",AB_TURRET,35,25,12,4,0},
+   {"LOCKDOWN","Create a wide suppression field that slows enemies.",AB_FIELD,0,9,4.5f,14,7}}},
+ {"SOVA","INITIATOR","Reconnaissance and shock utility help your team find and pressure enemies.",RGB(90,165,235),{
+   {"RECON BOLT","A recon pulse that reveals nearby enemies.",AB_SCAN,20,4,14,0,0},
+   {"SHOCK BOLT","A shock blast that concusses enemies in its radius.",AB_STUN,22,3,3.5f,12,0},
+   {"HUNTER'S FURY","A map-wide recon pulse that reveals all enemies.",AB_REVEALALL,0,6,0,0,6}}},
 };
 
 /* ---- maps: rectangle ops. 'W' wall, 'O' open, 'L' low cover, 'P' repaint walls,
@@ -127,8 +128,8 @@ static const MapOp RAMPARTS[]={
 
 #define MD(n,b,i,arr) {n,b,i,arr,(int)(sizeof(arr)/sizeof(arr[0]))}
 const MapDef g_maps[M_COUNT]={
- MD("CITADEL","Two sites, a pillared courtyard mid and market links.","ASCENT-INSPIRED",CITADEL),
- MD("TRINITY","Three sites (A B C) with long lanes and rotations.","HAVEN-INSPIRED",TRINITY),
- MD("PORTALS","No mid. Long and short lanes with two linked portals.","BIND-INSPIRED",PORTALS),
- MD("RAMPARTS","Choked central mid, ramps and heavy side mains.","SPLIT-INSPIRED",RAMPARTS),
+ MD("ASCENT","Two sites, a central courtyard and market rotations.","VALORANT MAP",CITADEL),
+ MD("HAVEN","Three sites with long lanes and fast rotations.","VALORANT MAP",TRINITY),
+ MD("BIND","Two sites, no mid, and paired teleporters.","VALORANT MAP",PORTALS),
+ MD("SPLIT","A tight central mid with elevated-feeling ramps and side lanes.","VALORANT MAP",RAMPARTS),
 };

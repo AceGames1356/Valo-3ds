@@ -13,7 +13,7 @@
 static uint8_t  s_tex[NTEX][TEX*TEX];            /* [type][u*32+v] palette indices 0..15 */
 static uint16_t s_pal[NTEX][SHADES][16];
 static uint16_t s_bgTab[480];                    /* ceiling/floor colour by (y-horizon+240) */
-static uint8_t  s_unitSpr[32][16];
+static uint8_t  s_unitSpr[40][24];
 static float    s_zbuf[TOP_W];
 static float    s_lowT[TOP_W][3];
 static int16_t  s_lowY[TOP_W][3];
@@ -80,15 +80,19 @@ void rd_init(void){
         if(dy<0) s_bgTab[i]=mix565((C3){18,24,40},(C3){52,70,104},1.0f-d*0.85f);
         else     s_bgTab[i]=mix565((C3){34,38,50},(C3){92,96,110},d);
     }
-    /* humanoid sprite, 16x32. 0 clear, 1 skin, 2 body, 3 dark, 4 visor, 5 gun, 6 boots */
+    /* Detailed 24x40 tactical-agent silhouette. 0 clear, 1 skin, 2 armor,
+       3 dark fabric, 4 visor, 5 rifle, 6 boots. */
     memset(s_unitSpr,0,sizeof s_unitSpr);
-    for(int y=0;y<8;y++) for(int x=5;x<11;x++) if(!((y==0||y==7)&&(x==5||x==10))) s_unitSpr[y][x]=1;
-    for(int x=6;x<10;x++){ s_unitSpr[3][x]=4; s_unitSpr[4][x]=4; }
-    for(int y=8;y<19;y++) for(int x=3;x<13;x++) s_unitSpr[y][x]=2;
-    for(int y=9;y<18;y++){ for(int x=1;x<3;x++) s_unitSpr[y][x]=3; for(int x=13;x<15;x++) s_unitSpr[y][x]=3; }
-    for(int y=12;y<15;y++) for(int x=9;x<16;x++) s_unitSpr[y][x]=5;
-    for(int y=19;y<30;y++){ for(int x=4;x<8;x++) s_unitSpr[y][x]=3; for(int x=8;x<12;x++) s_unitSpr[y][x]=3; }
-    for(int y=30;y<32;y++){ for(int x=3;x<8;x++) s_unitSpr[y][x]=6; for(int x=8;x<13;x++) s_unitSpr[y][x]=6; }
+    for(int y=1;y<9;y++) for(int x=9;x<16;x++) s_unitSpr[y][x]=1;
+    for(int x=9;x<16;x++) s_unitSpr[5][x]=4;
+    for(int y=8;y<12;y++) for(int x=10;x<15;x++) s_unitSpr[y][x]=3;
+    for(int y=11;y<26;y++) for(int x=5;x<20;x++) s_unitSpr[y][x]=2;
+    for(int y=13;y<25;y++){ for(int x=2;x<6;x++) s_unitSpr[y][x]=3; for(int x=19;x<23;x++) s_unitSpr[y][x]=3; }
+    for(int y=17;y<20;y++) for(int x=13;x<24;x++) s_unitSpr[y][x]=5;
+    for(int y=24;y<28;y++) for(int x=6;x<19;x++) s_unitSpr[y][x]=3;
+    for(int y=27;y<37;y++){ for(int x=7;x<11;x++) s_unitSpr[y][x]=3; for(int x=14;x<18;x++) s_unitSpr[y][x]=3; }
+    for(int y=36;y<40;y++){ for(int x=6;x<12;x++) s_unitSpr[y][x]=6; for(int x=13;x<19;x++) s_unitSpr[y][x]=6; }
+    for(int x=7;x<18;x++) s_unitSpr[24][x]=4;
 }
 
 static int cell_tex(int c){ return c==C_CRATE?8:(c==C_BARRIER?9:(c-1)); }
@@ -140,8 +144,33 @@ static void render_walls(Surf s,const Camera *c){
         float yTopW=s_horizon-(WALL_H-camZ)*f/zwall, yBotW=s_horizon+camZ*f/zwall;
         int top=(int)floorf(yTopW), bot=(int)floorf(yBotW);
         if(!wall){ top=bot=s_horizon; }
-        for(int y=0;y<top&&y<SCR_H;y++){ int i=y-s_horizon+240; col[SCR_H-1-y]=s_bgTab[i<0?0:(i>479?479:i)]; }
-        for(int y=(bot<0?0:bot+1);y<SCR_H;y++){ int i=y-s_horizon+240; col[SCR_H-1-y]=s_bgTab[i<0?0:(i>479?479:i)]; }
+        /* Perspective-mapped environment: ceiling panels above, tiled concrete
+           floor below. This adds real world-space depth cues instead of a flat gradient. */
+        for(int y=0;y<top&&y<SCR_H;y++){
+            int i=y-s_horizon+240; uint16_t c=s_bgTab[i<0?0:(i>479?479:i)];
+            int panel=((x/32)+(y/24))&1;
+            if((x%32==0)||(y%24==0)) c=RGB(27,36,52);
+            else if(panel) c=gx_blend(c,RGB(78,91,116),5);
+            col[SCR_H-1-y]=c;
+        }
+        for(int y=(bot<0?0:bot+1);y<SCR_H;y++){
+            int i=y-s_horizon+240;
+            float dist=camZ*f/(float)(y-s_horizon);
+            float wx=c->x+rdx*dist, wy=c->y+rdy*dist;
+            int tx=(int)floorf(wx), ty=(int)floorf(wy);
+            float ux=wx-floorf(wx), uy=wy-floorf(wy);
+            int zone=mp_cell(tx,ty);
+            C3 base={72,78,88};
+            int z=g_map.zone[clampi(ty,0,MAP_H-1)][clampi(tx,0,MAP_W-1)];
+            if(z==1) base=(C3){91,67,57};
+            else if(z==2) base=(C3){57,78,91};
+            else if(z==3) base=(C3){62,83,67};
+            if(((tx+ty)&1)!=0){ base.r=(uint8_t)(base.r*0.91f); base.g=(uint8_t)(base.g*0.91f); base.b=(uint8_t)(base.b*0.91f); }
+            if(ux<0.035f||uy<0.035f||ux>0.965f||uy>0.965f){ base.r*=0.48f; base.g*=0.48f; base.b*=0.48f; }
+            if(mp_is_low(zone)){ base.r=105; base.g=86; base.b=62; }
+            float fog=clampf(1.0f-dist/34.0f,0.12f,1.0f);
+            col[SCR_H-1-y]=mix565(FOG,base,fog);
+        }
         int lowN=0;
         for(int k=nh-1;k>=0;k--){
             const Hit *h=&hits[k];
@@ -193,10 +222,13 @@ static void draw_box(Surf s,const Proj *p,float wx,float wy,float z0,float z1,fl
 
 static void draw_unit(Surf s,const Proj *p,const Unit *u,const Unit *view,float sx,float depth){
     bool friendly=(u->squad==view->squad);
-    uint16_t body=friendly?RGB(70,190,210):RGB(215,70,70), dark=friendly?RGB(30,80,95):RGB(100,30,35);
-    uint16_t pal[7]={0,RGB(235,190,150),body,dark,friendly?RGB(180,255,255):RGB(255,230,120),RGB(40,40,46),RGB(25,25,30)};
+    uint16_t accent=g_agents[u->agent].color;
+    uint16_t body=friendly?gx_blend(accent,RGB(65,190,210),13):gx_blend(accent,RGB(225,65,70),12);
+    uint16_t dark=friendly?RGB(20,58,72):RGB(75,25,34);
+    uint16_t visor=friendly?RGB(145,245,255):RGB(255,205,120);
+    uint16_t pal[7]={0,RGB(226,184,150),body,dark,visor,RGB(38,42,50),RGB(18,22,29)};
     if(u->hurtT>0.35f) pal[2]=RGB(255,255,255);
-    float hgt=UNIT_H*p->f/depth, wid=hgt*0.5f;
+    float hgt=UNIT_H*p->f/depth, wid=hgt*0.62f;
     float yTop=s_horizon-(u->z+UNIT_H-p->camZ)*p->f/depth;
     int xl=(int)(sx-wid*0.5f), xr=(int)(sx+wid*0.5f);
     bool ghost=u->revealT>0&&!friendly;
@@ -205,11 +237,11 @@ static void draw_unit(Surf s,const Proj *p,const Unit *u,const Unit *view,float 
         bool hidden=depth>=s_zbuf[x]-0.05f;
         if(hidden&&!ghost) continue;
         int clip=hidden?SCR_H:col_clip(x,depth);
-        int sc=(int)((x-xl)*16/(wid>1?wid:1)); if(sc<0)sc=0; if(sc>15)sc=15;
-        float stp=32.0f/hgt;
+        int sc=(int)((x-xl)*24/(wid>1?wid:1)); if(sc<0)sc=0; if(sc>23)sc=23;
+        float stp=40.0f/hgt;
         int ya=(int)yTop, yb=(int)(yTop+hgt);
         for(int y=ya<0?0:ya;y<yb&&y<SCR_H&&y<clip;y++){
-            int sr=(int)((y-yTop)*stp); if(sr<0)sr=0; if(sr>31)sr=31;
+            int sr=(int)((y-yTop)*stp); if(sr<0)sr=0; if(sr>39)sr=39;
             uint8_t k=s_unitSpr[sr][sc]; if(!k) continue;
             if(hidden){ if((x+y)&1) continue; gx_px(s,x,y,RGB(255,60,60)); continue; }
             uint16_t c=pal[k];
@@ -327,15 +359,44 @@ void rd_viewmodel(Surf s,const Unit *u,float bob){
     if(u->swapT>0) by+=(int)(u->swapT*40.0f);
     if(u->reloadT>0) by+=(int)(sinf(clampf(u->reloadT/w->reload,0,1)*PI_F)*34.0f);
     int kick=(int)(u->kick*1.5f); by+=kick;
-    uint16_t dk=RGB(36,38,46), md=RGB(70,74,88), lt=RGB(120,126,142), hand=RGB(225,180,140);
+    uint16_t dk=RGB(24,27,34), md=RGB(58,64,76), lt=RGB(132,140,154);
+    uint16_t edge=RGB(92,103,120), grip=RGB(34,39,49), hand=RGB(220,174,137);
     int x0=250+bx, y0=SCR_H-70+by;
-    switch(w->type){
-    case WT_PISTOL: gx_rect(s,x0+30,y0+22,70,22,md); gx_rect(s,x0+84,y0+18,28,10,dk); gx_rect(s,x0+40,y0+44,18,30,dk); gx_rect(s,x0+34,y0+40,28,12,hand); x0+=0; break;
-    case WT_SMG:    gx_rect(s,x0+10,y0+20,100,22,md); gx_rect(s,x0+100,y0+22,36,8,dk); gx_rect(s,x0+40,y0+40,14,36,dk); gx_rect(s,x0+70,y0+40,20,14,hand); break;
-    case WT_SHOTGUN:gx_rect(s,x0-10,y0+18,140,18,md); gx_rect(s,x0-10,y0+36,110,8,dk); gx_rect(s,x0+70,y0+34,34,14,hand); gx_rect(s,x0+20,y0+40,16,34,dk); break;
-    case WT_SNIPER: gx_rect(s,x0-20,y0+20,160,14,md); gx_rect(s,x0+10,y0+8,40,12,dk); gx_rect(s,x0+120,y0+22,36,8,dk); gx_rect(s,x0+50,y0+34,24,38,dk); gx_rect(s,x0+80,y0+34,22,12,hand); break;
-    case WT_HEAVY:  gx_rect(s,x0-10,y0+14,130,32,md); gx_rect(s,x0+100,y0+22,50,10,dk); gx_rect(s,x0+20,y0+4,60,10,dk); gx_rect(s,x0+40,y0+46,16,32,dk); gx_rect(s,x0+78,y0+46,22,14,hand); break;
-    default: /* rifle */ gx_rect(s,x0-6,y0+20,130,20,md); gx_rect(s,x0+110,y0+23,46,8,dk); gx_rect(s,x0+30,y0+40,16,36,dk); gx_rect(s,x0+70,y0+40,24,14,hand); gx_rect(s,x0+10,y0+12,30,8,lt); break;
+    /* Layered weapon silhouettes: receiver, barrel, rail, sights and grips. */
+    if(w->type==WT_PISTOL){
+        gx_rect(s,x0+34,y0+24,78,17,md); gx_rect(s,x0+42,y0+20,60,5,lt);
+        gx_rect(s,x0+94,y0+27,44,7,dk); gx_rect(s,x0+133,y0+28,12,4,edge);
+        gx_rect(s,x0+46,y0+41,25,29,grip); gx_line(s,x0+48,y0+45,x0+67,y0+65,edge);
+        gx_rect(s,x0+82,y0+18,7,6,dk); gx_rect(s,x0+87,y0+15,3,4,edge);
+        gx_rect(s,x0+38,y0+36,18,5,hand);
+    } else {
+        int length=(w->type==WT_SNIPER)?164:((w->type==WT_SHOTGUN)?145:132);
+        int rx=x0-4;
+        gx_rect(s,rx+12,y0+23,length-28,17,md);
+        gx_rect(s,rx+24,y0+19,length-54,5,lt);
+        gx_rect(s,rx+length-24,y0+27,42,7,dk);
+        gx_rect(s,rx+length+14,y0+29,9,3,edge);
+        gx_rect(s,rx+4,y0+28,20,7,dk);
+        gx_rect(s,rx+30,y0+18,24,4,edge);
+        gx_rect(s,rx+54,y0+14,35,5,dk);
+        gx_rect(s,rx+61,y0+10,21,4,edge);
+        gx_rect(s,rx+42,y0+40,17,34,grip);
+        gx_rect(s,rx+83,y0+40,23,13,hand);
+        gx_line(s,rx+44,y0+48,rx+55,y0+66,edge);
+        gx_rect(s,rx+16,y0+42,22,8,hand);
+        gx_rect(s,rx+18,y0+50,15,22,grip);
+        if(w->type==WT_SNIPER){
+            gx_rect(s,rx+68,y0+4,44,9,dk); gx_rect(s,rx+76,y0+1,28,4,edge);
+            gx_rect(s,rx+91,y0+13,5,5,lt);
+        } else if(w->type==WT_SHOTGUN){
+            gx_rect(s,rx+6,y0+17,112,5,dk); gx_rect(s,rx+12,y0+44,76,7,grip);
+        } else if(w->type==WT_HEAVY){
+            gx_rect(s,rx+22,y0+7,74,9,dk); gx_rect(s,rx+30,y0+3,56,4,edge);
+            gx_rect(s,rx+102,y0+41,18,22,grip);
+        } else {
+            gx_rect(s,rx+20,y0+12,48,6,dk); gx_rect(s,rx+26,y0+8,34,4,edge);
+            gx_rect(s,rx+70,y0+40,18,26,grip);
+        }
     }
     if(u->muzzleT>0){ int mx=x0+(w->type==WT_PISTOL?112:150), my=y0+(w->type==WT_PISTOL?20:24);
         gx_disc(s,mx+6,my,10,RGB(255,200,80)); gx_disc(s,mx+6,my,5,RGB(255,250,200)); }

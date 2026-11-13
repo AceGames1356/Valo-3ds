@@ -267,13 +267,13 @@ static void screen_controls(void){
     gx_clear(T,C_BG);
     gx_text(T,12,10,"CONTROLS",C_GOLD,2);
     gx_text(T,12,34,"MOVE ........... CIRCLE PAD",C_TXT,1);
-    gx_text(T,12,46,"LOOK ........... C-STICK / D-PAD / TOUCH DRAG",C_TXT,1);
-    gx_text(T,12,58,"PAUSE .......... START",C_TXT,1);
+    gx_text(T,12,46,"AIM ............ C-STICK / TOUCH DRAG",C_TXT,1);
+    gx_text(T,12,58,"FIRE ........... R",C_TXT,1);
     for(int i=0;i<ACT_COUNT;i++){
         char b[64]; snprintf(b,sizeof b,"%-13s ... %s",act_name(i),g_set.bind[i]<0?"TOUCH SCREEN ONLY":btn_name(g_set.bind[i]));
         gx_text(T,12,76+i*12,b,(g_set.bind[i]>=B_DUP&&g_set.dpadLook)?RGB(255,120,90):C_TXT,1);
     }
-    wrap_text(T,12,196,62,"Tap an action on the bottom screen, then press the button you want. ABILITY and SWAP always have touch buttons during a match.",C_DIM,10);
+    wrap_text(T,12,190,62,"Old 3DS: use the on-screen ability and weapon buttons. Touch the minimap and drag to aim. Every action can be rebound below.",C_DIM,10);
     gx_clear(B,C_BG); title_bar("BUTTON LAYOUT");
     for(int p=0;p<PRESET_COUNT;p++){
         char b[20]; snprintf(b,sizeof b,"%s",preset_name(p));
@@ -389,12 +389,16 @@ static void play_live_ui(const Unit *view){
     for(int i=0;i<3;i++){
         const Ability *a=&g_agents[me->agent].ab[i];
         bool ready=(i<2)?me->cd[i]<=0:me->ult>=a->cost;
-        char l[40]; if(i<2) snprintf(l,sizeof l,"%s%s",a->name,ready?"":" ..."); else snprintf(l,sizeof l,"%s %d/%d",a->name,(int)me->ult,a->cost);
+        char l[40]; int act=(i==0)?ACT_ABIL1:((i==1)?ACT_ABIL2:ACT_ULT);
+        const char *key=g_set.bind[act]>=0?btn_name(g_set.bind[act]):"TOUCH";
+        if(i<2) snprintf(l,sizeof l,"%s  %s%s",key,a->name,ready?"":" ...");
+        else snprintf(l,sizeof l,"%s  %s %d/%d",key,a->name,(int)me->ult,a->cost);
         uint16_t col=ready?gx_blend(C_BTN,g_agents[me->agent].color,12):RGB(36,38,50);
         if(btn(160,26+i*30,154,26,l,col,true)&&ready) s_uiAbil=i;
         if(i<2&&me->cd[i]>0){ int w=(int)(154*me->cd[i]/a->cd); gx_rect_a(B,160,26+i*30,w,26,RGB(0,0,0),14); }
     }
-    if(btn(160,118,154,24,"SWAP WEAPON",C_BTN,me->wp[0]>=0&&me->wp[1]>=0)) s_uiSwap=true;
+    { char sw[32]; snprintf(sw,sizeof sw,"%s  SWAP WEAPON",g_set.bind[ACT_SWAP]>=0?btn_name(g_set.bind[ACT_SWAP]):"TOUCH");
+      if(btn(160,118,154,24,sw,C_BTN,me->wp[0]>=0&&me->wp[1]>=0)) s_uiSwap=true; }
     gx_text(B,160,148,"TEAM COMMAND",C_DIM,1);
     static const char *CN[6]={"AUTO","FOLLOW","HOLD","SITE A","SITE B","SITE C"};
     for(int i=0;i<6;i++){
